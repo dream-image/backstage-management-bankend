@@ -1,0 +1,602 @@
+<template>
+  <div>
+    <div id="all-wrapper" style=" justify-content: space-evenly">
+      <div id="header-wrapper">
+        <div id="header-title">
+          <!-- <el-breadcrumb separator="/" style="transform: translateX(25px) translateY(10px)">
+            <el-breadcrumb-item :to="{ path: routeUrl.QUESTION }">题库管理</el-breadcrumb-item>
+            <el-breadcrumb-item>题库细则</el-breadcrumb-item>
+            <el-breadcrumb-item>选择题</el-breadcrumb-item>
+            <el-breadcrumb-item v-if="typeSelect" style="font-family: '阿里妈妈刀隶体'; font-weight: 1000">{{ breadcrumbTitle
+            }}</el-breadcrumb-item> -->
+
+          <!-- </el-breadcrumb> -->
+          <client-only>
+
+            <el-select v-model="typeSelect" @change="changeTypeSelect" class="m-2" placeholder="请选择题库" size="small"
+              style="transform: translateY(25px) translateX(17px)">
+              <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </client-only>
+        </div>
+        <div id="header-body">
+          <div style="
+            display: flex;
+            justify-content: space-around;
+            width: 400px;
+            position: relative;
+            top: 0;
+            bottom: 0;
+            margin: auto 0;
+            height: max-content;
+          ">
+            <h2 style="
+              text-align: center;
+              height: 32px;
+              line-height: 32px;
+              width: 80px;
+            ">
+              题目内容
+            </h2>
+            <el-input placeholder="题目内容" style="width: 130px" v-model="questionContent" clearable
+              @blur="searchQuestion(false)"></el-input>
+            <el-button type="primary" style="width: 60px" @click="searchQuestion(false)">查询</el-button>
+            <el-button style="width: 60px" @click="reset">重置</el-button>
+          </div>
+          <div style="width: 100px">
+            <el-button type="primary" @click="handleAdd()" style="
+              width: 75px;
+              position: absolute;
+              top: 0;
+              bottom: 0;
+              margin: auto 0;
+              transform: translateX(-150px);
+            ">添加</el-button>
+            <el-button type="primary" style="
+              width: 100px;
+              position: absolute;
+              top: 0;
+              bottom: 0;
+              margin: auto 0;
+              transform: translateX(-50px);
+            ">批量导入</el-button>
+          </div>
+        </div>
+      </div>
+      <div id="body-wrapper">
+        <div style="
+          display: flex;
+          justify-content: space-between;
+          height: 27px;
+          width: 100%;
+        ">
+          <h1 style="
+            font-size: large;
+            font-weight: bolder;
+            transform: translateX(25px) translateY(8px);
+            height: 27px;
+            width: 80px;
+          ">
+            题目列表
+          </h1>
+          <div style="
+            margin-top: 20px;
+            transform: translateX(-48px) translateY(-10px);
+          ">
+          </div>
+        </div>
+
+        <div id="table" onload="getTypedate()">
+          <client-only>
+            <el-table ref="multipleTableRef" :data="readTableData" style="width: 100%; height: 100%; display: flex;" lazy
+              @expand-change="exchangeTable">
+              <el-table-column type="expand">
+                <template #default="props">
+                  <div m="4" class="table_expand">
+                    <div class="table_expand_left" style="width: 50%">
+                      <p m="t-0 b-2" class="table_expand_p" style="color: #409eff">
+                        题型: {{ props.row.datitype }}
+                      </p>
+                      <p m="t-0 b-2" class="table_expand_p">
+                        题目: {{ props.row.title }}
+                      </p>
+
+                      <div v-for="i in Object.getOwnPropertyNames(props.row).filter(
+                        (j) => {
+                          return /option/.test(j) && props.row[j] !== null && props.row[j] !== undefined && props.row[j] !== '';
+                        }
+                      )" key="{{props.row.id}}">
+                        <p m="t-0 b-2" class="table_expand_p">
+                          {{ i.split("n")[1] }}: {{ props.row[i] }}
+                        </p>
+                      </div>
+
+                      <p m="t-0 b-2" class="table_expand_p" style="color: #f56c6c">
+                        正确答案: {{ props.row.answer }}
+                      </p>
+                    </div>
+                    <div :id="'pieChart:' + props.row.id"
+                      style="width: 450px; height: 275px;position: relative;top: 0;bottom: 0;left: 0;right: 0;margin: auto;transform: translateY(10px);">
+                    </div>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column property="question" label="题目" :width="questionType == 'select' ? 170 : 656"
+                show-overflow-tooltip />
+              <template v-if="questionType == 'select'">
+                <el-table-column property="creationTime" label="创建时间" width="150px" show-overflow-tooltip />
+                <el-table-column property="lastModified" label="最近修改时间" width="150px" show-overflow-tooltip />
+                <el-table-column property="createdBy" label="创建人" width="120px" show-overflow-tooltip />
+                <el-table-column property="modifiedBy" label="修改人" width="120px" show-overflow-tooltip />
+              </template>
+
+              <el-table-column property="handler" label="编辑" show-overflow-tooltip>
+                <template #default="scope">
+                  <!-- <el-button size="small" type="primary" plain @click="handleEdit(scope.$index, scope.row)" disabled="true"><el-icon>
+                      <Edit />
+
+                    </el-icon></el-button> -->
+
+                  <el-button size="small" type="danger" @click="handleDelete(scope.$index, scope.row)" plain>
+                    <el-icon>
+                      <Delete />
+                    </el-icon> </el-button></template>
+              </el-table-column>
+            </el-table>
+          </client-only>
+        </div>
+        <div style="width: 100%; transform: translateY(5px); height: 50px">
+          <!-- 分页器 -->
+          <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize"
+            :page-sizes="[10, 20, 50, 100, 150, 200]" :small="true" :disabled="false" :background="false"
+            layout="total, sizes, prev, pager, next, jumper" :total="totalNumber" @size-change="handleSizeChange"
+            @current-change="handleCurrentChange" style="
+            position: absolute;
+            right: 100px;
+            transform: translateY(13px);
+            user-select: none;
+          " />
+        </div>
+      </div>
+
+    </div>
+
+    <div id="edit"
+      style="position:absolute; margin: 130px 280px; background-color: white; z-index: 11; display: none; width: 400px;">
+      <div id="edit_box">
+        <el-form :model="form" :key="timer" style="max-height: 450px; overflow:auto;" >
+          <div id="app">
+            <el-form-item label="题目描述">
+              <el-input v-model="form.title" style="margin:0px 0px"></el-input>
+            </el-form-item>
+            <el-form-item label="题型选择" style="width: 180px;">
+              <el-select v-model="form.type" @change="handleQuestionTypeChange" placeholder="选择题型">
+                <el-option label="文本题" value="text"></el-option>
+                <el-option label="判断题" value="multipleChoice"></el-option>
+                <el-option label="选择题" value="singleChoice"></el-option>
+              </el-select>
+            </el-form-item>
+            <div v-show="form.type === 'text'">
+              <label for="textAnswer">答案</label>
+              <el-input type="text" id="textAnswer" name="textAnswer" style="margin: 0px 0px 0px 13px;width: 298px;"
+                v-model="form.correctAnswer" />
+            </div>
+
+            <div v-show="form.type === 'multipleChoice'">
+              <label for="multipleChoiceOptions">选项对：</label>
+              <el-input type="text" id="multipleChoiceOptions" name="multipleChoiceOptions" v-model="form.optionA" style="width: 280px;"/>
+              <label for="multipleChoiceOptions">选项错：</label>
+              <el-input type="text" id="multipleChoiceOptions" name="multipleChoiceOptions" v-model="form.optionB" style="width: 280px; margin: 10px 0px;"/>
+              <label for="textAnswer">答案:</label>
+              <el-input type="text" id="textAnswer" name="textAnswer" style="margin: 0px 10px 0px 21px;width: 140px;"
+                v-model="form.correctAnswer" />
+            </div>
+
+            <div v-show="form.type === 'singleChoice'">
+              <label for="optionCount">选项个数 </label>
+              <el-input type="number" id="optionCount" v-model="form.columnnum" @input="generateInputFields"
+                style="width: 90px; margin: 0px 9px ;" />
+                
+              <!-- 根据选项个数动态生成输入框 -->
+              <div v-for="index in parseInt(form.columnnum)" :key="index">
+                <div style="margin: 15px 0px;">
+                <label :for="`input${index}`">选项{{ String.fromCharCode(index+64) }}：</label>
+                <el-input :type="inputType" :id="`input${index}`" :name="`input${index}`" v-model="form[`option${String.fromCharCode(index+64)}`]" style="width: 270px;"/>
+              </div>
+              </div>
+              <div style=" margin:15px 10px 0px 0px;">
+                <label for="singleChoiceOptions" style=" margin:0px 10px 0px px;">答案:</label>
+                  <el-input type="text" id="singleChoiceOptions" name="singleChoiceOptions" v-model="form.correctAnswer"
+                    style="width: 200px;margin: 0px 0px 0px 18px ;" placeholder="多个选项用英文逗号分隔" />
+              </div>
+              
+            </div>
+            <!-- 题目添加的按钮 -->
+            <div style="margin:10px 0px">
+              <el-button @click="CancelAdd" type="primary">取消</el-button>
+              <el-button @click="addQuestion" type="primary">添加</el-button>
+            </div>
+          </div>
+
+          <!-- 引入 Vue.js 和 Element Plus 的脚本 -->
+          <!-- <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+  <script src="https://unpkg.com/element-plus/lib/index.full.js"></script> -->
+          <!-- <div v-if="form.type=='单选题'">
+                <span>{{console.log(form.type)}}</span>
+                <el-form-item lable="选项数量">
+              <el-input></el-input>
+            </el-form-item>
+            </div> -->
+
+        </el-form>
+      </div>
+    </div>
+  </div>
+</template>
+<script setup lang="js">
+import { routeUrl } from '~/nutils/goto';
+import { _ } from "lodash"
+import * as echarts from 'echarts';
+
+const { options, tableData: xy, questionType } = defineProps(["options", "tableData", "questionType"])
+// const tableDate=ref([])
+const copyData = ref(xy)
+const tableData = ref(xy)
+const breadcrumbTitle = ref("题库选择")
+const typeSelect = ref("")
+const selectedQuestionType = ref("")
+const currentPage = ref(1)
+const pageSize = ref(10)
+const totalNumber = ref(tableData.value.length)
+const readTableData = ref([])
+const questionContent = ref("")
+watchEffect(() => {
+  totalNumber.value = tableData.value.length
+  readTableData.value = tableData.value.slice((currentPage.value - 1) * pageSize.value, _.min([(currentPage.value) * pageSize.value, tableData.value.length]))
+})
+//表单数据和函数
+import axios from 'axios';
+import { reactive } from 'vue'
+const timer = ref(1);
+const inputs=ref([]);
+// do not use same name with ref
+
+const onSubmit = () => {
+  console.log('submit!')
+}
+const form = reactive({
+  title: '',
+  optionA: ' ',
+  optionB: '',
+  optionC: '',
+  optionD: ' ',
+  optionE: ' ',
+  Anumber: "",
+  Bnumber: "",
+  Cnumber: "",
+  Dnumber: "",
+  Enumber: "",
+  correctAnswer: '',
+  type: '',
+  creationTime: '',
+  lastModified: '',
+  modifiedBy: '',
+  createdBy: '',
+  columnnum:0
+});
+
+//获取题目列表
+onMounted(() => {
+  
+  axios.get("http://localhost:8888/get/allquestion"
+  ).then(response => {
+    // 请求成功，处理响应
+    console.log('获取的数据:', response.data);
+    response.data.forEach(element => {
+      element.lastModified = element.lastModified.substring(0, 10)
+      element.creationTime = element.creationTime.substring(0, 10)
+      console.log(element.lastModified)
+    });
+    tableData.value = response.data;
+    // console.log(tableData);
+  }).catch(error => {
+    // 处理请求错误
+    showError = true;
+    console.error('请求失败:', error);
+  })
+})
+// 题库选择
+function changeTypeSelect(value) {
+  options.forEach((i, index, arr) => {
+    if (i.value == value) {
+      breadcrumbTitle.value = arr[index].label
+    }
+  })
+}
+
+function generateInputFields() {
+  console.log(inputs);
+  inputs = Array.from({ length: parseInt(form.columnnum) }, () => '');
+  console.log(inputs);
+}
+// 题目内容模糊查询
+function searchQuestion(reset) {
+  if (reset || questionContent.value == "") {
+    readTableData.value.push({})
+    readTableData.value.pop()
+    currentPage.value = 1
+    tableData.value = copyData.value
+  } else {
+    tableData.value = copyData.value
+    readTableData.value = tableData.value.filter(i => {
+      return (new RegExp(questionContent.value)).test(i.title)
+    })
+    tableData.value = readTableData.value
+  }
+
+}
+
+// 重置按钮
+function reset() {
+  questionContent.value = ""
+  searchQuestion(true)
+
+}
+//取消添加题目
+function CancelAdd(){
+  document.getElementById("all").style.display = "none";
+  document.getElementById("edit").style.display = "none";
+}
+// const moment = require('moment');
+// const formattedTime = moment().format('YYYY-MM-DD');
+//添加题目按钮
+function addQuestion(){
+
+  // formattedTime
+  // console.log(formattedTime);
+  axios.post("http://localhost:8888/add/question",form).then(response=>{
+    
+    console.log(response.data);
+    console.log(form);
+  }).catch(error=>{
+    console.log(form);
+  })
+}
+function handleSizeChange() {
+
+}
+function handleCurrentChange() {
+
+}
+
+
+function dateChange() {
+  console.log("值改变")
+  console.log(timer)
+  timer.value = timer.value + 1;
+
+}
+// 更改某条数据
+function handleAdd() {
+  document.getElementById("all").style.display = "block";
+  document.getElementById("edit").style.display = "block";
+  // editForm.value = obj;
+  // console.log(editForm.value.title)
+}
+
+
+// 删除数据
+function handleDelete(a, obj) {
+
+  if (questionContent.value) {
+    let dataIndex = null
+    try {
+      copyData.value.forEach((i, index) => {
+        if (i.id == obj.id) {
+          dataIndex = index
+          throw new Error("找到对应的元素了")
+        }
+      })
+    } catch {
+      copyData.value.splice(dataIndex, 1)
+      let dataIndex2 = null
+      try {
+        tableData.value.forEach((i, index) => {
+          if (i.id == obj.id) {
+            dataIndex2 = index
+            throw new Error("找到对应的元素了")
+          }
+        })
+      }
+      catch {
+        tableData.value.splice(dataIndex2, 1)
+      }
+    }
+  }
+  else {
+    let realIndex = (currentPage.value - 1) * pageSize.value + a
+    tableData.value.splice(realIndex, 1)
+    copyData.value.splice(realIndex, 1)
+  }
+}
+
+const multipleTableRef = ref()
+
+
+//批量删除
+function deleteSelection() {
+  let ids = []
+  multipleTableRef.value.getSelectionRows().forEach((i, index, arr) => {
+    ids.push(i.id)
+  })
+  copyData.value = copyData.value.filter(i => {
+    return ids.indexOf(i.id) == -1
+  })
+  tableData.value = tableData.value.filter(i => {
+    return ids.indexOf(i.id) == -1
+  })
+}
+
+
+function exchangeTable(a, expandedRows) {
+  if (expandedRows.length != 0) {
+    expandedRows.forEach((i, index) => {
+      setTimeout(() => {
+        let dom = document.getElementById("pieChart:" + i.id)
+
+        //piechart饼状图数据
+        let pieOption;
+
+        pieOption = {
+          tooltip: {
+            trigger: 'item'
+          },
+          legend: {
+            top: '0%',
+            left: 'center'
+          },
+          series: [
+            {
+              name: '选项',
+              type: 'pie',
+              radius: ['40%', '70%'],
+              avoidLabelOverlap: false,
+              itemStyle: {
+                borderRadius: 10,
+                borderColor: '#fff',
+                borderWidth: 2
+              },
+              label: {
+                show: true,
+                position: "outside",
+                rotate: "tangential",
+                fontWeight: "normal",
+                fontSize: 15,
+                alignTo: "none",
+                edgeDistance: 0,
+                borderWidth: 3,
+                // borderColor:"#bfa",
+                formatter: '{b}: {d}%',
+                distanceToLabelLine: 0,
+              },
+              emphasis: {
+                label: {
+                  show: true,
+                  fontSize: 20,
+                  fontWeight: 'bold'
+                }
+              },
+              labelLine: {
+                show: true,
+                // showAbove:true,
+                length2: 10,
+                lineStyle: {
+                  width: 3
+                }
+              },
+              data: Object.getOwnPropertyNames(i).filter(x => {
+                return /[A-Z]num/.test(x) && i[x] !== null
+              }).map(y => {
+                return { value: i[y], name: y.split('num')[0] }
+              })
+            }
+          ]
+        };
+
+        var myChartPie = echarts.init(dom);
+        pieOption && myChartPie.setOption(pieOption);
+
+      }, 1000)
+    })
+
+
+
+  } else {
+    console.log("aa", a)
+  }
+
+
+
+
+}
+</script>
+<style lang="scss" scoped>
+#all-wrapper {
+  // border: 1px solid black;
+  position: absolute;
+  height: 100%;
+  width: 96%;
+  left: 0px;
+  right: 0px;
+  top: 10px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+
+  #header-wrapper {
+    height: 120px;
+    border-radius: 40px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 0 2px 10px 0 rgba(237, 238, 240, 0.5);
+
+    #header-title {
+      width: 100%;
+      height: 95px;
+      background-color: white;
+    }
+
+    #header-body {
+      height: 50px;
+      width: 100%;
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 10px;
+      background-color: white;
+    }
+  }
+
+  #body-wrapper {
+    overflow: hidden;
+    background-color: white;
+    box-shadow: 0 2px 10px 0 rgba(237, 238, 240, 0.5);
+    position: relative;
+    height: 75%;
+
+    #table {
+      width: 93%;
+      height: 85%;
+      position: relative;
+      left: 0;
+      right: 0;
+      margin: auto;
+      transform: translateY(10px);
+    }
+
+  }
+
+  .table_expand {
+    margin: 10px 60px;
+    display: flex;
+  }
+
+  .table_expand_p {
+    margin: 10px 0px;
+  }
+
+
+}
+
+#edit {
+
+
+  #edit_box {
+    margin: 20px 30px;
+  }
+}
+</style>
