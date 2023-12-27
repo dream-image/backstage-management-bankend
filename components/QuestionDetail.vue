@@ -59,7 +59,27 @@
               bottom: 0;
               margin: auto 0;
               transform: translateX(-50px);
-            ">批量导入</el-button>
+            " @click="dialogImport = true">批量导入</el-button>
+            <client-only>
+              <el-dialog v-model="dialogImport" title="批量导入" style="width: 300px;">
+                <div style="display: flex; width: 240px;justify-content: space-between;justify-items: center;">
+
+                  <QuestionComponent></QuestionComponent>
+                  <el-button type="primary" @click="download">
+                    <el-icon>
+                      <Download />
+                    </el-icon>
+                    下载模板
+                  </el-button>
+                </div>
+
+                <template #footer>
+                  <span class="dialog-footer">
+                    <el-button @click="dialogImport = false">取消</el-button>
+                  </span>
+                </template>
+              </el-dialog>
+            </client-only>
           </div>
         </div>
       </div>
@@ -86,10 +106,10 @@
           </div>
         </div>
 
-        <div id="table" onload="getTypedate()">
+        <div id="table">
           <client-only>
-            <el-table ref="multipleTableRef" :data="readTableData" style="width: 100%; height: 100%; display: flex;" lazy
-              @expand-change="exchangeTable">
+            <el-table ref="multipleTableRef" :data="reallyTableData" style="width: 100%; height: 100%; display: flex;"
+              lazy @expand-change="exchangeTable">
               <el-table-column type="expand">
                 <template #default="props">
                   <div m="4" class="table_expand">
@@ -121,15 +141,13 @@
                   </div>
                 </template>
               </el-table-column>
-              <el-table-column property="question" label="题目" :width="questionType == 'select' ? 170 : 656"
-                show-overflow-tooltip />
-              <template v-if="questionType == 'select'">
-                <el-table-column property="creationTime" label="创建时间" width="150px" show-overflow-tooltip />
-                <el-table-column property="lastModified" label="最近修改时间" width="150px" show-overflow-tooltip />
-                <el-table-column property="createdBy" label="创建人" width="120px" show-overflow-tooltip />
-                <el-table-column property="modifiedBy" label="修改人" width="120px" show-overflow-tooltip />
-              </template>
+              <el-table-column property="question" label="题目" :width="800" prop="question" show-overflow-tooltip>
 
+              </el-table-column>
+
+              <el-table-column property="question" label="类型" :width="80" prop="datitype" sortable show-overflow-tooltip>
+
+              </el-table-column>
               <el-table-column property="handler" label="编辑" show-overflow-tooltip>
                 <template #default="scope">
                   <!-- <el-button size="small" type="primary" plain @click="handleEdit(scope.$index, scope.row)" disabled="true"><el-icon>
@@ -164,13 +182,13 @@
     <div id="edit"
       style="position:absolute; margin: 130px 280px; background-color: white; z-index: 11; display: none; width: 400px;">
       <div id="edit_box">
-        <el-form :model="form" :key="timer" style="max-height: 450px; overflow:auto;" >
+        <el-form :model="form" :key="timer" style="max-height: 450px; overflow:auto;">
           <div id="app">
             <el-form-item label="题目描述">
               <el-input v-model="form.title" style="margin:0px 0px"></el-input>
             </el-form-item>
             <el-form-item label="题型选择" style="width: 180px;">
-              <el-select v-model="form.type" @change="handleQuestionTypeChange" placeholder="选择题型">
+              <el-select v-model="form.type" @change="" placeholder="选择题型">
                 <el-option label="文本题" value="text"></el-option>
                 <el-option label="判断题" value="multipleChoice"></el-option>
                 <el-option label="选择题" value="singleChoice"></el-option>
@@ -184,9 +202,11 @@
 
             <div v-show="form.type === 'multipleChoice'">
               <label for="multipleChoiceOptions">选项对：</label>
-              <el-input type="text" id="multipleChoiceOptions" name="multipleChoiceOptions" v-model="form.optionA" style="width: 280px;"/>
+              <el-input type="text" id="multipleChoiceOptions" name="multipleChoiceOptions" v-model="form.optionA"
+                style="width: 280px;" />
               <label for="multipleChoiceOptions">选项错：</label>
-              <el-input type="text" id="multipleChoiceOptions" name="multipleChoiceOptions" v-model="form.optionB" style="width: 280px; margin: 10px 0px;"/>
+              <el-input type="text" id="multipleChoiceOptions" name="multipleChoiceOptions" v-model="form.optionB"
+                style="width: 280px; margin: 10px 0px;" />
               <label for="textAnswer">答案:</label>
               <el-input type="text" id="textAnswer" name="textAnswer" style="margin: 0px 10px 0px 21px;width: 140px;"
                 v-model="form.correctAnswer" />
@@ -196,20 +216,21 @@
               <label for="optionCount">选项个数 </label>
               <el-input type="number" id="optionCount" v-model="form.columnnum" @input="generateInputFields"
                 style="width: 90px; margin: 0px 9px ;" />
-                
+
               <!-- 根据选项个数动态生成输入框 -->
               <div v-for="index in parseInt(form.columnnum)" :key="index">
                 <div style="margin: 15px 0px;">
-                <label :for="`input${index}`">选项{{ String.fromCharCode(index+64) }}：</label>
-                <el-input :type="inputType" :id="`input${index}`" :name="`input${index}`" v-model="form[`option${String.fromCharCode(index+64)}`]" style="width: 270px;"/>
-              </div>
+                  <label :for="`input${index}`">选项{{ String.fromCharCode(index + 64) }}：</label>
+                  <el-input :type="inputType" :id="`input${index}`" :name="`input${index}`"
+                    v-model="form[`option${String.fromCharCode(index + 64)}`]" style="width: 270px;" />
+                </div>
               </div>
               <div style=" margin:15px 10px 0px 0px;">
                 <label for="singleChoiceOptions" style=" margin:0px 10px 0px px;">答案:</label>
-                  <el-input type="text" id="singleChoiceOptions" name="singleChoiceOptions" v-model="form.correctAnswer"
-                    style="width: 200px;margin: 0px 0px 0px 18px ;" placeholder="多个选项用英文逗号分隔" />
+                <el-input type="text" id="singleChoiceOptions" name="singleChoiceOptions" v-model="form.correctAnswer"
+                  style="width: 200px;margin: 0px 0px 0px 18px ;" placeholder="多个选项用英文逗号分隔" />
               </div>
-              
+
             </div>
             <!-- 题目添加的按钮 -->
             <div style="margin:10px 0px">
@@ -238,27 +259,47 @@ import { routeUrl } from '~/nutils/goto';
 import { _ } from "lodash"
 import * as echarts from 'echarts';
 
-const { options, tableData: xy, questionType } = defineProps(["options", "tableData", "questionType"])
-// const tableDate=ref([])
-const copyData = ref(xy)
-const tableData = ref(xy)
+const props = defineProps(["options", "tableData"])
+const copyData = ref([])
+const tableData = ref([])
+const options = ref([])
 const breadcrumbTitle = ref("题库选择")
 const typeSelect = ref("")
 const selectedQuestionType = ref("")
 const currentPage = ref(1)
 const pageSize = ref(10)
 const totalNumber = ref(tableData.value.length)
-const readTableData = ref([])
+const reallyTableData = ref([])
 const questionContent = ref("")
+const dialogImport = ref(false)
 watchEffect(() => {
   totalNumber.value = tableData.value.length
-  readTableData.value = tableData.value.slice((currentPage.value - 1) * pageSize.value, _.min([(currentPage.value) * pageSize.value, tableData.value.length]))
+  reallyTableData.value = tableData.value.slice((currentPage.value - 1) * pageSize.value, _.min([(currentPage.value) * pageSize.value, tableData.value.length]))
 })
+watch(props, () => {
+
+  options.value = props.options
+  typeSelect.value = props.options[0].value
+
+}, { immediate: true })
+
+watch(typeSelect, () => {
+    axios.get(`http://localhost:8888/get/allquestion?name=${typeSelect.value}`).then(response => {
+      // 请求成功，处理响应
+      tableData.value = response.data;
+      copyData.value = response.data;
+      // console.log(tableData);
+    }).catch(error => {
+      // 处理请求错误
+      ElMessage.error('获取题目列表失败');
+      console.error('请求失败:', error);
+    })
+}, { immediate: true })
 //表单数据和函数
 import axios from 'axios';
 import { reactive } from 'vue'
 const timer = ref(1);
-const inputs=ref([]);
+const inputs = ref([]);
 // do not use same name with ref
 
 const onSubmit = () => {
@@ -282,32 +323,13 @@ const form = reactive({
   lastModified: '',
   modifiedBy: '',
   createdBy: '',
-  columnnum:0
+  columnnum: 0
 });
 
-//获取题目列表
-onMounted(() => {
-  
-  axios.get("http://localhost:8888/get/allquestion"
-  ).then(response => {
-    // 请求成功，处理响应
-    console.log('获取的数据:', response.data);
-    response.data.forEach(element => {
-      element.lastModified = element.lastModified.substring(0, 10)
-      element.creationTime = element.creationTime.substring(0, 10)
-      console.log(element.lastModified)
-    });
-    tableData.value = response.data;
-    // console.log(tableData);
-  }).catch(error => {
-    // 处理请求错误
-    showError = true;
-    console.error('请求失败:', error);
-  })
-})
+
 // 题库选择
 function changeTypeSelect(value) {
-  options.forEach((i, index, arr) => {
+  options.value.forEach((i, index, arr) => {
     if (i.value == value) {
       breadcrumbTitle.value = arr[index].label
     }
@@ -322,16 +344,16 @@ function generateInputFields() {
 // 题目内容模糊查询
 function searchQuestion(reset) {
   if (reset || questionContent.value == "") {
-    readTableData.value.push({})
-    readTableData.value.pop()
+    reallyTableData.value.push({})
+    reallyTableData.value.pop()
     currentPage.value = 1
     tableData.value = copyData.value
   } else {
     tableData.value = copyData.value
-    readTableData.value = tableData.value.filter(i => {
-      return (new RegExp(questionContent.value)).test(i.title)
+    reallyTableData.value = tableData.value.filter(i => {
+      return (new RegExp(questionContent.value)).test(i.question)
     })
-    tableData.value = readTableData.value
+    tableData.value = reallyTableData.value
   }
 
 }
@@ -343,22 +365,22 @@ function reset() {
 
 }
 //取消添加题目
-function CancelAdd(){
+function CancelAdd() {
   document.getElementById("all").style.display = "none";
   document.getElementById("edit").style.display = "none";
 }
 // const moment = require('moment');
 // const formattedTime = moment().format('YYYY-MM-DD');
 //添加题目按钮
-function addQuestion(){
+function addQuestion() {
 
   // formattedTime
   // console.log(formattedTime);
-  axios.post("http://localhost:8888/add/question",form).then(response=>{
-    
+  axios.post("http://localhost:8888/add/question", form).then(response => {
+
     console.log(response.data);
     console.log(form);
-  }).catch(error=>{
+  }).catch(error => {
     console.log(form);
   })
 }
@@ -409,12 +431,25 @@ function handleDelete(a, obj) {
         })
       }
       catch {
-        tableData.value.splice(dataIndex2, 1)
+        // console.log("dasda")
+        $fetch("http://localhost:8888/question",{
+          method:"DELETE",
+          body:{
+            id:[tableData.value[dataIndex2].id]
+          }
+        })
       }
+      // tableData.value.splice(dataIndex2, 1)
     }
   }
   else {
     let realIndex = (currentPage.value - 1) * pageSize.value + a
+    $fetch("http://localhost:8888/question",{
+          method:"DELETE",
+          body:{
+            id:[tableData.value[realIndex].id]
+          }
+        })
     tableData.value.splice(realIndex, 1)
     copyData.value.splice(realIndex, 1)
   }
@@ -443,7 +478,6 @@ function exchangeTable(a, expandedRows) {
     expandedRows.forEach((i, index) => {
       setTimeout(() => {
         let dom = document.getElementById("pieChart:" + i.id)
-
         //piechart饼状图数据
         let pieOption;
 
@@ -508,16 +542,13 @@ function exchangeTable(a, expandedRows) {
 
       }, 1000)
     })
-
-
-
   } else {
     console.log("aa", a)
   }
+}
 
-
-
-
+function download() {
+  window.open('/模板.xlsx')
 }
 </script>
 <style lang="scss" scoped>
@@ -598,5 +629,21 @@ function exchangeTable(a, expandedRows) {
   #edit_box {
     margin: 20px 30px;
   }
+}
+
+.el-button--text {
+  margin-right: 15px;
+}
+
+.el-select {
+  width: 300px;
+}
+
+.el-input {
+  width: 300px;
+}
+
+.dialog-footer button:first-child {
+  margin-right: 10px;
 }
 </style>

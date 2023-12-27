@@ -56,27 +56,27 @@
               margin-top: 20px;
               transform: translateX(-48px) translateY(-10px);
             ">
-          <el-button @click="clearSelected()" style="width: 80px" size="small" type="primary">清除选中</el-button>
-          <el-button @click="deleteSelection()" style="width: 80px" size="small" type="primary">批量删除</el-button>
+          <!-- <el-button @click="clearSelected()" style="width: 80px" size="small" type="primary">清除选中</el-button> -->
+          <!-- <el-button @click="deleteSelection()" style="width: 80px" size="small" type="primary">批量删除</el-button> -->
         </div>
       </div>
 
       <div id="table">
         <client-only>
-          <el-table ref="multipleTableRef" :data="readTableData" style="width: 100%; height: 310px; border: none"
+          <el-table ref="multipleTableRef" :data="reallyTableData" style="width: 100%; height: 310px; border: none"
             @selection-change="handleSelectionChange" lazy @row-click="activeCheckbox">
             <el-table-column type="selection" width="55" />
             <el-table-column property="bankname" label="题库名称" show-overflow-tooltip width="150" align="left" />
             <el-table-column property="questionnum" label="题库数量" width="150" show-overflow-tooltip align="center" />
 
-            <el-table-column property="createtime" label="建立日期" show-overflow-tooltip width="150" align="center" />
+            <el-table-column property="createtime" label="建立日期" show-overflow-tooltip width="250" align="center" />
 
             <el-table-column property="creater" label="建立者" width="150" show-overflow-tooltip align="center" />
-            <el-table-column property="handler" label="编辑" show-overflow-tooltip>
+            <el-table-column property="handler" label="删除" show-overflow-tooltip>
               <template #default="scope">
-                <el-button size="small" type="primary" plain @click="handleEdit(scope.$index, scope.row)"><el-icon>
+                <!-- <el-button size="small" type="primary" plain @click="handleEdit(scope.$index, scope.row)"><el-icon>
                     <Edit />
-                  </el-icon></el-button>
+                  </el-icon></el-button> -->
                 <el-button size="small" type="danger" @click="handleDelete(scope.$index, scope.row)" plain>
                   <el-icon>
                     <Delete />
@@ -103,28 +103,32 @@
 import { routeUrl } from '~/nutils/goto';
 import { _ } from "lodash"
 import axios from 'axios';
-import { createHydrationRenderer } from 'vue';
 
-const props = defineProps(["options", "tableData", "questionType"])
-const { options, tableData: xy, questionType } = props
-// const options=ref([])
-const copyData = ref(xy)
-const tableData = ref(xy)
+
+const props = defineProps(["tableData"])
+const { options } = props
+
+const copyData = ref([])
+const tableData = ref([])
 const breadcrumbTitle = ref("题库选择")
 
 const currentPage = ref(1)
 const pageSize = ref(10)
 const totalNumber = ref(tableData.value.length)
-const readTableData = ref([])
+const reallyTableData = ref([])
 const questionBankName = ref("")
 
 const multipleTableRef = ref()
 const multipleSelection = ref([])
 watchEffect(() => {
   totalNumber.value = tableData.value.length
-  readTableData.value = tableData.value.slice((currentPage.value - 1) * pageSize.value, _.min([(currentPage.value) * pageSize.value, tableData.value.length]))
+  reallyTableData.value = tableData.value.slice((currentPage.value - 1) * pageSize.value, _.min([(currentPage.value) * pageSize.value, tableData.value.length]))
 })
-
+watch(props,()=>{
+  // console.log(props)
+  copyData.value = props.tableData
+  tableData.value = props.tableData
+})
 
 // 题库选择
 function changeTypeSelect(value) {
@@ -135,37 +139,21 @@ function changeTypeSelect(value) {
   })
 }
 
-onMounted(()=>{
-  axios.get("http://localhost:8888/get/allquestionbank"
-).then(response => {
-// 请求成功，处理响应
-console.log('获取的数据:', response.data);
-response.data.forEach(element => {
-  element.createtime=element.createtime.substring(0,10)
-});
-tableData.value=response.data;
-console.log(tableData);
-}).catch(error => {
-  // 处理请求错误
-  showError = true;
-  console.error('请求失败:', error);
-})
-})
 
 
 // 题目内容模糊查询
 function searchQuestion(reset) {
   if (reset || questionBankName.value == "") {
-    readTableData.value.push({})
-    readTableData.value.pop()
+    reallyTableData.value.push({})
+    reallyTableData.value.pop()
     currentPage.value = 1
     tableData.value = copyData.value
   } else {
     tableData.value = copyData.value
-    readTableData.value = tableData.value.filter(i => {
-      return (new RegExp(questionBankName.value)).test(i.name)
+    reallyTableData.value = tableData.value.filter(i => {
+      return (new RegExp(questionBankName.value)).test(i.bankname)
     })
-    tableData.value = readTableData.value
+    tableData.value = reallyTableData.value
   }
 
 }

@@ -15,7 +15,7 @@
       <div>
         <div id="body-info" style="height: 200px; display: flex; flex-direction: row; width: 100%">
           <div id="body-info-picture" style="width: 200px; position: relative">
-            <el-avatar src="/20209172232329657.jpg" :size="130"
+            <el-avatar :src="props.person.avatar" :size="130"
               style="left: 30; right: 0; margin: auto; position: absolute" />
             <!-- <el-button style="
                 position: absolute;
@@ -30,8 +30,8 @@
             <li class="body-info-li">用户名：{{ person.username }} </li>
             <li class="body-info-li" @click="nicknameClick()">昵称：
               <template v-if="isReadonly">
-                <el-input @blur="isReadonly = !isReadonly" @keydown.enter="isReadonly = !isReadonly" type="text"
-                  id="editableInput" v-model="person.nickname" style="width: 120px;" />
+                <el-input @blur="changeNickName" @keydown.enter="isReadonly = !isReadonly" type="text" id="editableInput"
+                  v-model="person.nickname" style="width: 120px;" />
               </template>
               <template v-if="!isReadonly">{{ person.nickname }}</template>
             </li>
@@ -39,10 +39,10 @@
           </div>
           <div id="body-info-column3" style="width: 200px; margin: 0px 10px;" class="body-info">
             <li class="body-info-li">
-              普通模式总正确题数：{{ person.commonCorrectNumber }}
+              普通模式总分：{{ person.commonSumNumber }}
             </li>
             <li class="body-info-li">
-              挑战模式正确率：{{ person.challengeAccuracy }}
+              挑战模式正确率平均数：{{ person.challengeAccuracy }}
             </li>
             <li class="body-info-li">上次登陆：{{ person.login_time }}</li>
           </div>
@@ -60,10 +60,19 @@
           </div>
         </div>
       </div>
-      <div id="body-picture" style="height: 200px">
-        <div id="normal-picture" style="width: 350px; height: 200px; transform: translateX(-30px)" ref="normalPicture">
+      <div id="body-picture" style="height: 200px;position: relative;display: flex;justify-content:safe center;align-items: center;">
+        <client-only>
+          <div style="position: absolute;left: 50px;top: 0;transform:translateY(-80px)">
+            <el-select v-model="showWhatQuestionBank" @change="changeTypeSelect" class="m-2" placeholder="请选择题库"
+              size="small" style="transform: translateY(25px) translateX(17px)">
+              <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </div>
+
+        </client-only>
+        <div id="normal-picture" style="width: 450px; height: 200px; transform: translateX(-20px)" ref="normalPicture">
         </div>
-        <div id="challenge-picture" style="width: 350px; height: 200px; transform: translateX(-50px) "
+        <div id="challenge-picture" style="width: 450px; height: 200px;  "
           ref="challengePicture"></div>
       </div>
     </div>
@@ -75,7 +84,7 @@ import { routeUrl } from '~/nutils/goto';
 import { _ } from "lodash"
 import axios from 'axios';
 import { SelectProps } from 'element-plus/es/components/select-v2/src/defaults';
-
+const props = defineProps(['person'])
 const person = ref({})
 // reactive({
 
@@ -104,38 +113,13 @@ watch(() => route.query.username ? route.query.username : "", (newValue, oldValu
   }
 })
 
-const props = defineProps(["options"])
-const { options } = props
-var history =
-  [{ date: "", number: "", correctNumber: "" },
-  { date: "", number: "", correctNumber: "" },
-  { date: "", number: "", correctNumber: "" },
-  { date: "", number: "", correctNumber: "" },
-  { date: "", number: "", correctNumber: "" },
-  ]
-
-
-onMounted(() => {
-  axios.get("http://localhost:8888/get/user", {
-    params: {
-      'username': route.query.username
-    }
-  }).then(response => {
-    // 请求成功，处理响应
-    console.log('获取的数据:', response.data[0]);
-
-    response.data.forEach(element => {
-      element.register_time = element.register_time.substring(0, 10);
-      element.login_time = element.login_time.substring(0, 10);
-    });
-    person.value = response.data[0];
-    console.log(person)
-  }).catch(error => {
-    // 处理请求错误
-    showError = true;
-    console.error('请求失败:', error);
-  });
+watch(props, () => {
+  person.value = props.person
 })
+
+
+
+
 const searchContent = ref("")
 
 //返回按钮
@@ -150,7 +134,10 @@ function nicknameClick() {
 function remarkClick() {
   isReadremark.value = true;
 }
+function changeNickName() {
+  isReadonly = !isReadonly
 
+}
 // 题目内容模糊查询
 function searchQuestion(reset, username) {
   if (reset || username == "") {
@@ -165,40 +152,341 @@ function searchQuestion(reset, username) {
       console.log(i, obj[i])
       person[i] = obj[i]
     })
-    console.log(person)
+    // console.log(person)
   }
 
-
 }
-
+function changeTypeSelect(value) {
+  options.value.forEach((i, index, arr) => {
+    if (i.value == value) {
+      showWhatQuestionBank.value = arr[index].label
+    }
+  })
+}
 //图形展示
 const normalPicture = ref(null)
 const challengePicture = ref(null)
+const showWhatQuestionBank = ref("")
+const history=ref([])
+const options = useState('options', () => {
+  (async () => {
+    const { data, pending, error, refresh } = await useFetch('http://localhost:8888/questionBanks')
+    console.log(toValue(data.value.options))
+    options.value= toValue(data.value.options)
+    showWhatQuestionBank.value=options.value[0].value
+  })()
+})
+//当options还没有缓存的时候，还会执行后面的回调，而回调的返回值会作为初始值赋值给options
+//但是，我回调里面写的是异步函数，所以直接在异步结束的时候再赋值给一遍options  这样就实现了，有options就不去服务器拿，没有options才去服务器拿
+
+
 onMounted(() => {
-
-  axios.get("http://localhost:8888/get/history/nearlyfivetimes", {
+  axios.get("http://localhost:3000/person", {
     params: {
-      username: route.query.username,
-      mode: "普通模式"
-
+      userId: route.query.id,
     }
   }).then(response => {
-    console.log(response.data);
-    response.data.forEach(element => {
-      element.date = element.date.substring(0, 10)
-    });
-    console.log(history)
-    history = response.data;
-    console.log(history)
+    history.value=response.data.range
     // myChart = this.$echarts.init (document.getElementById ('normal-picture'))
     // myChart.setOption (normalOption,true);
 
-    normalOption = {
+
+  }).catch(error => {
+    console.log(error);
+    console.log("获取最近五次挑战信息失败");
+  })
+
+  // axios.get("http://localhost:8888/get/history/nearlyfivetimes", {
+  //   params: {
+  //     username: route.query.username,
+  //     mode: "挑战模式"
+
+  //   }
+  // }).then(response => {
+  //   console.log(response.data);
+  //   response.data.forEach(element => {
+  //     element.date = element.date.substring(0, 10)
+  //   });
+  //   console.log(challengeHistory)
+  //   challengeHistory = response.data;
+  //   console.log(challengeHistory)
+
+  //   let challengeOption = {
+  //     toolbox: {
+  //       show: false
+  //     },
+  //     title: {
+  //       text: '挑战模式答题记录',
+  //       textStyle: {
+  //         fontSize: 15,
+  //       },
+  //       right: 'center',
+  //       top: 0
+  //     },
+  //     tooltip: {
+  //       trigger: 'axis',
+  //       formatter: '{b} <br/> 花费{c0}秒<br />{a1}:{c1}%'
+  //     },
+
+  //     legend: {
+  //       data: ['答题时间', '准确率'],
+  //       orient: 'vertical',
+  //       right: 20,
+  //       top: 0
+  //     },
+  //     grid: {
+  //       left: '3%',
+  //       right: '4%',
+  //       bottom: '3%',
+  //       containLabel: true,
+
+  //     },
+  //     toolbox: {
+  //       feature: {
+  //         saveAsImage: {}
+  //       }
+  //     },
+  //     xAxis: {
+  //       type: 'category',
+  //       data: history.map(i => {
+  //         return i.date
+  //       }),
+  //       name: "日期"
+  //     },
+  //     yAxis: [
+  //       {
+  //         type: "value",
+  //         name: "答题时间(秒)",
+  //         nameLocation: "middle",
+  //         nameTextStyle: {
+  //           padding: [0, 0, 24, 0],
+  //           fontWeight: "bold",
+  //           fontSize: "12",
+  //           color: "#232253"
+  //         },
+  //         position: "left",
+  //         nameGap: "5",
+  //         min: 0,
+  //         max: 1000
+  //       },
+  //       {
+  //         type: "value",
+  //         name: "准确率(%)",
+  //         nameLocation: "middle",
+  //         nameTextStyle: {
+  //           padding: [20, 10, 10, 0],
+  //           fontWeight: "bold",
+  //           fontSize: "12",
+  //           color: "#232253"
+  //         },
+  //         min: "0",
+  //         max: "100",
+  //         splitLine: {
+  //           show: false
+  //         },
+  //         nameGap: "10"
+  //       },
+
+  //     ],
+  //     series: [
+  //       { name: "答题时间", type: 'bar', data: challengeHistory.map(j => j.spendTime), label: { formatter: '{c}', show: true } },
+  //       { yAxisIndex: 1, name: "准确率", type: 'line', data: challengeHistory.map(j => j.accuracy), label: { formatter: '{c}%', show: true } }
+  //     ]
+  //   };
+  //   const challengeChartDom = challengePicture.value;
+  //   const challengeChart = echarts.init(challengeChartDom);
+  //   challengeOption && challengeChart.setOption(challengeOption);
+  // })
+
+  // let normalOption = {
+  //   toolbox: {
+  //     show: false
+  //   },
+  //   title: {
+  //     text: '普通模式答题记录',
+  //     textStyle: {
+  //       fontSize: 15
+  //     },
+  //     left: 'center',
+  //   },
+  //   tooltip: {
+  //     trigger: 'axis',
+  //     formatter: '{b} <br/> 共答{c0}题<br />{a1}:{c1}%'
+  //   },
+
+  //   legend: {
+  //     data: ['答题数目', '准确率'],
+  //     orient: 'vertical',
+  //     right: 20,
+  //     top: 0
+  //   },
+  //   grid: {
+  //     left: '3%',
+  //     right: '4%',
+  //     bottom: '3%',
+  //     containLabel: true
+  //   },
+  //   toolbox: {
+  //     feature: {
+  //       saveAsImage: {}
+  //     }
+  //   },
+  //   xAxis: {
+  //     type: 'category',
+  //     data: history.map(i => {
+  //       return i.date
+  //     }),
+  //     name: "日期"
+  //   },
+  //   yAxis: [
+  //     {
+  //       type: "value",
+  //       name: "答题数目(题)",
+  //       nameLocation: "center",
+  //       nameTextStyle: {
+  //         padding: [0, 0, 10, 0],
+  //         fontWeight: "bold",
+  //         fontSize: "12",
+  //         color: "#232253"
+  //       },
+  //       position: "left",
+  //       nameGap: "20",
+  //       min: 0,
+  //       max: 1000
+  //     },
+
+  //     {
+  //       type: "value",
+  //       name: "准确率(%)",
+  //       nameLocation: "center",
+  //       nameTextStyle: {
+  //         padding: [10, 0, 0, 20],
+  //         fontWeight: "bold",
+  //         fontSize: "12",
+  //         color: "#232253"
+  //       },
+  //       min: "0",
+  //       max: "100",
+  //       splitLine: {
+  //         show: false
+  //       },
+  //       nameGap: "20"
+  //     },
+
+  //   ],
+  //   series: [
+  //     { name: "答题数目", type: 'bar', data: history.map(j => j.number), label: { formatter: '{c}', show: true } },
+  //     { yAxisIndex: 1, name: "准确率", type: 'line', data: history.map(j => _.floor(j.correctNumber / j.number * 100, 2)), label: { formatter: '{c}%', show: true } }
+  //   ]
+  // };
+  // let challengeOption = {
+  //   toolbox: {
+  //     show: false
+  //   },
+  //   title: {
+  //     text: '挑战模式答题记录',
+  //     textStyle: {
+  //       fontSize: 15,
+  //     },
+  //     right: 'center',
+  //     top: 0
+  //   },
+  //   tooltip: {
+  //     trigger: 'axis',
+  //     formatter: '{b} <br/> 花费{c0}秒<br />{a1}:{c1}%'
+  //   },
+
+  //   legend: {
+  //     data: ['答题时间', '准确率'],
+  //     orient: 'vertical',
+  //     right: 20,
+  //     top: 0
+  //   },
+  //   grid: {
+  //     left: '3%',
+  //     right: '4%',
+  //     bottom: '3%',
+  //     containLabel: true,
+
+  //   },
+  //   toolbox: {
+  //     feature: {
+  //       saveAsImage: {}
+  //     }
+  //   },
+  //   xAxis: {
+  //     type: 'category',
+  //     data: history.map(i => {
+  //       return i.date
+  //     }),
+  //     name: "日期"
+  //   },
+  //   yAxis: [
+  //     {
+  //       type: "value",
+  //       name: "答题时间(秒)",
+  //       nameLocation: "middle",
+  //       nameTextStyle: {
+  //         padding: [0, 0, 24, 0],
+  //         fontWeight: "bold",
+  //         fontSize: "12",
+  //         color: "#232253"
+  //       },
+  //       position: "left",
+  //       nameGap: "5",
+  //       min: 0,
+  //       max: 1000
+  //     },
+  //     {
+  //       type: "value",
+  //       name: "准确率(%)",
+  //       nameLocation: "middle",
+  //       nameTextStyle: {
+  //         padding: [20, 10, 10, 0],
+  //         fontWeight: "bold",
+  //         fontSize: "12",
+  //         color: "#232253"
+  //       },
+  //       min: "0",
+  //       max: "100",
+  //       splitLine: {
+  //         show: false
+  //       },
+  //       nameGap: "10"
+  //     },
+
+  //   ],
+  //   series: [
+  //     { name: "答题时间", type: 'bar', data: challengeHistory.map(j => j.spendTime), label: { formatter: '{c}', show: true } },
+  //     { yAxisIndex: 1, name: "准确率", type: 'line', data: challengeHistory.map(j => j.accuracy), label: { formatter: '{c}%', show: true } }
+  //   ]
+  // };
+
+
+
+})
+
+watch(showWhatQuestionBank,()=>{
+  if(person.value){
+    // console.log(history.value)
+    
+    let obj=toRaw(history.value.find(i=>i.value==showWhatQuestionBank.value))
+    if(!obj){
+      ElMessage.warning('无该题库记录')
+      return
+    }
+    // console.log(data)
+    if(!obj.common || !obj.common.series){
+      ElMessage.warning('该题库无普通记录')
+      
+    }else{
+      console.log(obj.common)
+    let normalOption = {
       toolbox: {
         show: false
       },
       title: {
-        text: '普通模式答题记录',
+        text: `${showWhatQuestionBank.value}普通模式记录`,
         textStyle: {
           fontSize: 15
         },
@@ -206,11 +494,11 @@ onMounted(() => {
       },
       tooltip: {
         trigger: 'axis',
-        formatter: '{b} <br/> 共答{c0}题<br />{a1}:{c1}%'
+        formatter: '{b} <br/> {a0}:{c0}<br />'
       },
 
       legend: {
-        data: ['答题数目', '准确率'],
+        // data: ['分数'],
         orient: 'vertical',
         right: 20,
         top: 0
@@ -228,15 +516,16 @@ onMounted(() => {
       },
       xAxis: {
         type: 'category',
-        data: history.map(i => {
-          return i.date
-        }),
-        name: "日期"
+        data: obj.common.categories.reverse(),
+        name: "日期",
+        axisLabel: {
+          interval:0
+        }
       },
       yAxis: [
         {
           type: "value",
-          name: "答题数目(题)",
+          name: "分数",
           nameLocation: "center",
           nameTextStyle: {
             padding: [0, 0, 10, 0],
@@ -246,87 +535,46 @@ onMounted(() => {
           },
           position: "left",
           nameGap: "20",
-          min: 0,
-          max: 1000
-        },
 
-        {
-          type: "value",
-          name: "准确率(%)",
-          nameLocation: "center",
-          nameTextStyle: {
-            padding: [10, 0, 0, 20],
-            fontWeight: "bold",
-            fontSize: "12",
-            color: "#232253"
-          },
-          min: "0",
-          max: "100",
-          splitLine: {
-            show: false
-          },
-          nameGap: "20"
         },
-
       ],
-      series: [
-        { name: "答题数目", type: 'bar', data: history.map(j => j.number), label: { formatter: '{c}', show: true } },
-        { yAxisIndex: 1, name: "准确率", type: 'line', data: history.map(j => _.floor(j.correctNumber / j.number * 100, 2)), label: { formatter: '{c}%', show: true } }
-      ]
+      series:obj.common.series.map(i=>{
+        return {
+          ...i,
+          data:i.data.reverse(),
+          label: { formatter: '{c}', show: true },
+          type:"line"
+        }
+      }).reverse()
     };
     var normalChartDom = normalPicture.value;
     var normalChart = echarts.init(normalChartDom);
+    console.log(normalOption)
     normalOption && normalChart.setOption(normalOption);
-    console.log(normalOption)
-    console.log(normalOption)
-    console.log(normalOption)
-    console.log(normalOption)
-
-  }).catch(error => {
-    console.log(error);
-    console.log("获取最近五次挑战信息失败");
-  })
-  let challengeHistory = [
-    { date: "2022/01/01", accuracy: 30, spendTime: 288 },
-    { date: "2022/01/02", accuracy: 60, spendTime: 120 },
-    { date: "2022/02/12", accuracy: 12, spendTime: 100 },
-    { date: "2022/02/15", accuracy: 93, spendTime: 250 },
-    { date: "2022/02/19", accuracy: 44, spendTime: 240 }
-  ]
-  axios.get("http://localhost:8888/get/history/nearlyfivetimes", {
-    params: {
-      username: route.query.username,
-      mode: "挑战模式"
-
     }
-  }).then(response => {
-    console.log(response.data);
-    response.data.forEach(element => {
-      element.date = element.date.substring(0, 10)
-    });
-    console.log(challengeHistory)
-    challengeHistory = response.data;
-    console.log(challengeHistory)
-
+    if(!obj.challenge || !obj.challenge.series){
+      ElMessage.warning("该题库无挑战记录")
+      
+    }else{
+      console.log(obj.challenge)
     let challengeOption = {
       toolbox: {
         show: false
       },
       title: {
-        text: '挑战模式答题记录',
+        text: `${showWhatQuestionBank.value}挑战模式记录`,
         textStyle: {
-          fontSize: 15,
+          fontSize: 15
         },
-        right: 'center',
-        top: 0
+        left: 'center',
       },
       tooltip: {
         trigger: 'axis',
-        formatter: '{b} <br/> 花费{c0}秒<br />{a1}:{c1}%'
+        formatter: '{b0} <br/> {a0}:{c0}<br />{a1}:{c1}秒'
       },
 
       legend: {
-        data: ['答题时间', '准确率'],
+        // data: ['分数',"答题时间(秒)"],
         orient: 'vertical',
         right: 20,
         top: 0
@@ -335,8 +583,7 @@ onMounted(() => {
         left: '3%',
         right: '4%',
         bottom: '3%',
-        containLabel: true,
-
+        containLabel: true
       },
       toolbox: {
         feature: {
@@ -345,222 +592,60 @@ onMounted(() => {
       },
       xAxis: {
         type: 'category',
-        data: history.map(i => {
-          return i.date
-        }),
-        name: "日期"
+        data: obj.challenge.categories.reverse(),
+        name: "日期",
+        axisLabel: {
+          interval:0
+        }
       },
       yAxis: [
         {
           type: "value",
-          name: "答题时间(秒)",
-          nameLocation: "middle",
+          name: "分数",
+          nameLocation: "center",
           nameTextStyle: {
-            padding: [0, 0, 24, 0],
+            padding: [0, 0, 10, 0],
             fontWeight: "bold",
             fontSize: "12",
             color: "#232253"
           },
           position: "left",
-          nameGap: "5",
-          min: 0,
-          max: 1000
+          nameGap: "20",
+
         },
         {
           type: "value",
-          name: "准确率(%)",
-          nameLocation: "middle",
+          name: "答题时间(秒)",
+          nameLocation: "center",
           nameTextStyle: {
-            padding: [20, 10, 10, 0],
+            padding: [0, 0, 35,0],
             fontWeight: "bold",
             fontSize: "12",
             color: "#232253"
           },
-          min: "0",
-          max: "100",
-          splitLine: {
-            show: false
-          },
-          nameGap: "10"
+          position: "right",
+          nameRotate:270,
+          nameGap: "5",
+          min:0,
+          max:1000
         },
-
       ],
-      series: [
-        { name: "答题时间", type: 'bar', data: challengeHistory.map(j => j.spendTime), label: { formatter: '{c}', show: true } },
-        { yAxisIndex: 1, name: "准确率", type: 'line', data: challengeHistory.map(j => j.accuracy), label: { formatter: '{c}%', show: true } }
-      ]
+      series:obj.challenge.series.map(i=>{
+        return {
+          ...i,
+          data:i.data.reverse(),
+          label: { formatter: '{c}', show: true },
+          type:"line"
+        }
+      })
     };
-    const challengeChartDom = challengePicture.value;
-    const challengeChart = echarts.init(challengeChartDom);
+
+    var challengeChartDom = challengePicture.value;
+    var challengeChart = echarts.init(challengeChartDom);
+    // console.log(challengeChart)
     challengeOption && challengeChart.setOption(challengeOption);
-  })
-
-  let normalOption = {
-    toolbox: {
-      show: false
-    },
-    title: {
-      text: '普通模式答题记录',
-      textStyle: {
-        fontSize: 15
-      },
-      left: 'center',
-    },
-    tooltip: {
-      trigger: 'axis',
-      formatter: '{b} <br/> 共答{c0}题<br />{a1}:{c1}%'
-    },
-
-    legend: {
-      data: ['答题数目', '准确率'],
-      orient: 'vertical',
-      right: 20,
-      top: 0
-    },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      containLabel: true
-    },
-    toolbox: {
-      feature: {
-        saveAsImage: {}
-      }
-    },
-    xAxis: {
-      type: 'category',
-      data: history.map(i => {
-        return i.date
-      }),
-      name: "日期"
-    },
-    yAxis: [
-      {
-        type: "value",
-        name: "答题数目(题)",
-        nameLocation: "center",
-        nameTextStyle: {
-          padding: [0, 0, 10, 0],
-          fontWeight: "bold",
-          fontSize: "12",
-          color: "#232253"
-        },
-        position: "left",
-        nameGap: "20",
-        min: 0,
-        max: 1000
-      },
-
-      {
-        type: "value",
-        name: "准确率(%)",
-        nameLocation: "center",
-        nameTextStyle: {
-          padding: [10, 0, 0, 20],
-          fontWeight: "bold",
-          fontSize: "12",
-          color: "#232253"
-        },
-        min: "0",
-        max: "100",
-        splitLine: {
-          show: false
-        },
-        nameGap: "20"
-      },
-
-    ],
-    series: [
-      { name: "答题数目", type: 'bar', data: history.map(j => j.number), label: { formatter: '{c}', show: true } },
-      { yAxisIndex: 1, name: "准确率", type: 'line', data: history.map(j => _.floor(j.correctNumber / j.number * 100, 2)), label: { formatter: '{c}%', show: true } }
-    ]
-  };
-  let challengeOption = {
-    toolbox: {
-      show: false
-    },
-    title: {
-      text: '挑战模式答题记录',
-      textStyle: {
-        fontSize: 15,
-      },
-      right: 'center',
-      top: 0
-    },
-    tooltip: {
-      trigger: 'axis',
-      formatter: '{b} <br/> 花费{c0}秒<br />{a1}:{c1}%'
-    },
-
-    legend: {
-      data: ['答题时间', '准确率'],
-      orient: 'vertical',
-      right: 20,
-      top: 0
-    },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      containLabel: true,
-
-    },
-    toolbox: {
-      feature: {
-        saveAsImage: {}
-      }
-    },
-    xAxis: {
-      type: 'category',
-      data: history.map(i => {
-        return i.date
-      }),
-      name: "日期"
-    },
-    yAxis: [
-      {
-        type: "value",
-        name: "答题时间(秒)",
-        nameLocation: "middle",
-        nameTextStyle: {
-          padding: [0, 0, 24, 0],
-          fontWeight: "bold",
-          fontSize: "12",
-          color: "#232253"
-        },
-        position: "left",
-        nameGap: "5",
-        min: 0,
-        max: 1000
-      },
-      {
-        type: "value",
-        name: "准确率(%)",
-        nameLocation: "middle",
-        nameTextStyle: {
-          padding: [20, 10, 10, 0],
-          fontWeight: "bold",
-          fontSize: "12",
-          color: "#232253"
-        },
-        min: "0",
-        max: "100",
-        splitLine: {
-          show: false
-        },
-        nameGap: "10"
-      },
-
-    ],
-    series: [
-      { name: "答题时间", type: 'bar', data: challengeHistory.map(j => j.spendTime), label: { formatter: '{c}', show: true } },
-      { yAxisIndex: 1, name: "准确率", type: 'line', data: challengeHistory.map(j => j.accuracy), label: { formatter: '{c}%', show: true } }
-    ]
-  };
-
-
-
+    }
+  }
 })
 </script>
 <style lang="scss" scoped>

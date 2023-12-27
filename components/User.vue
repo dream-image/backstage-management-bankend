@@ -60,34 +60,35 @@
             margin-top: 20px;
             transform: translateX(-48px) translateY(-10px);
           ">
-          <el-button @click="clearSelected()" style="width: 80px" size="small" type="primary">清除选中</el-button>
-          <el-button @click="deleteSelection()" style="width: 80px" size="small" type="primary">批量删除</el-button>
+          <!-- <el-button @click="clearSelected()" style="width: 80px" size="small" type="primary">清除选中</el-button> -->
+          <!-- <el-button @click="deleteSelection()" style="width: 80px" size="small" type="primary">批量删除</el-button> -->
         </div>
       </div>
 
       <div id="table">
         <client-only>
-          <el-table ref="multipleTableRef" :data="readTableData" style="width: 100%; height: 310px; border: none"
+          <el-table ref="multipleTableRef" :data="reallyTableData" style="width: 100%; height: 310px; border: none"
             @selection-change="handleSelectionChange" lazy @row-click="activeCheckbox"
             :default-sort="{ order: 'ascending', prop: 'username' }">
             <el-table-column type="selection" width="55" />
             <el-table-column property="username" label="用户名" show-overflow-tooltip width="155" sortable />
             <el-table-column property="nickname" label="昵称" show-overflow-tooltip width="130" sortable />
-            <el-table-column property="register_time" label="注册时间" show-overflow-tooltip width="150" sortable />
-            <el-table-column property="login_time" label="上次登陆" show-overflow-tooltip width="150" sortable />
-            <el-table-column property="commonCorrectNumber" label="普通模式总正确题数" show-overflow-tooltip width="105"
+            <el-table-column property="registerDate" label="注册时间" show-overflow-tooltip width="150" sortable />
+            <el-table-column property="lastLogin" label="上次登陆" show-overflow-tooltip width="150" sortable />
+            <el-table-column property="commonSumNumber" label="普通模式总分" show-overflow-tooltip width="135"
               align="center " header-align="left" sortable />
-            <el-table-column property="challengeAccuracy" label="挑战模式正确率" show-overflow-tooltip width="90" align="center "
-              header-align="left" sortable />
+            <el-table-column property="challengeAccuracy" label="挑战模式平均正确率" show-overflow-tooltip width="110" align="center"
+              header-align="center" sortable  />
             <el-table-column property="handler" label="操作" show-overflow-tooltip>
               <template #default="scope">
                 <el-button size="small" @click="handleEdit(scope.$index, scope.row)" style="width: 40px; border: none">
                   <img src="~/assets/info.svg" width="23" height="23" id="img" />
                 </el-button>
-                <el-button size="small" type="danger" @click="handleDelete(scope.$index, scope.row)" plain>
+                <!-- <el-button size="small" type="danger" @click="handleDelete(scope.$index, scope.row)" plain>
                   <el-icon>
                     <Delete />
-                  </el-icon> </el-button></template>
+                  </el-icon> </el-button> -->
+                </template>
             </el-table-column>
           </el-table>
         </client-only>
@@ -115,45 +116,34 @@ useHead({
 })
 
 const props = defineProps(["tableData"])
-const { tableData: xy, } = props
-const copyData = ref(xy)
-const tableData = ref(xy)
+const copyData = ref([])
+const tableData = ref([])
 const currentPage = ref(1)
 const pageSize = ref(10)
 const totalNumber = ref(tableData.value.length)
-const readTableData = ref([])
+const reallyTableData = ref([])
 const searchContent = ref("")
 watchEffect(() => {
   totalNumber.value = tableData.value.length
-  readTableData.value = tableData.value.slice((currentPage.value - 1) * pageSize.value, _.min([(currentPage.value) * pageSize.value, tableData.value.length]))
+  reallyTableData.value = tableData.value.slice((currentPage.value - 1) * pageSize.value, _.min([(currentPage.value) * pageSize.value, tableData.value.length]))
 })
-onMounted(() => {
-  axios.get("http://localhost:8888/get/alluser").then(response => {
-    console.log(response.data);
-    response.data.forEach(element => {
-      element.register_time=element.register_time.substring(0,10);
-      element.login_time=element.login_time.substring(0,10);
-    });
-    readTableData.value = response.data;
-    
-  }).catch(error => {
-
-  })
+watch(props,()=>{
+  copyData.value = props.tableData
+  tableData.value = props.tableData
 })
-
 // 用户名或昵称模糊查询
 function searchQuestion(reset) {
   if (reset || searchContent.value == "") {
-    readTableData.value.push({})
-    readTableData.value.pop()
+    reallyTableData.value.push({})
+    reallyTableData.value.pop()
     currentPage.value = 1
     tableData.value = copyData.value
   } else {
     tableData.value = copyData.value
-    readTableData.value = tableData.value.filter(i => {
+    reallyTableData.value = tableData.value.filter(i => {
       return (new RegExp(searchContent.value)).test(i.username) || (new RegExp(searchContent.value)).test(i.nickname)
     })
-    tableData.value = readTableData.value
+    tableData.value = reallyTableData.value
   }
 
 }
@@ -179,7 +169,7 @@ function handleCurrentChange() {
 function handleEdit(a, obj) {
   navigateTo({
     path: routeUrl.USERDETAIL, query: {
-      username: obj.username
+      id: obj.id
     }
   })
 
@@ -187,40 +177,40 @@ function handleEdit(a, obj) {
 }
 
 
-// 删除数据
-function handleDelete(a, obj) {
+// // 删除数据
+// function handleDelete(a, obj) {
 
-  if (searchContent.value) {
-    let dataIndex = null
-    try {
-      copyData.value.forEach((i, index) => {
-        if (i.id == obj.id) {
-          dataIndex = index
-          throw new Error("找到对应的元素了")
-        }
-      })
-    } catch {
-      copyData.value.splice(dataIndex, 1)
-      let dataIndex2 = null
-      try {
-        tableData.value.forEach((i, index) => {
-          if (i.id == obj.id) {
-            dataIndex2 = index
-            throw new Error("找到对应的元素了")
-          }
-        })
-      }
-      catch {
-        tableData.value.splice(dataIndex2, 1)
-      }
-    }
-  }
-  else {
-    let realIndex = (currentPage.value - 1) * pageSize.value + a
-    tableData.value.splice(realIndex, 1)
-    copyData.value.splice(realIndex, 1)
-  }
-}
+//   if (searchContent.value) {
+//     let dataIndex = null
+//     try {
+//       copyData.value.forEach((i, index) => {
+//         if (i.id == obj.id) {
+//           dataIndex = index
+//           throw new Error("找到对应的元素了")
+//         }
+//       })
+//     } catch {
+//       copyData.value.splice(dataIndex, 1)
+//       let dataIndex2 = null
+//       try {
+//         tableData.value.forEach((i, index) => {
+//           if (i.id == obj.id) {
+//             dataIndex2 = index
+//             throw new Error("找到对应的元素了")
+//           }
+//         })
+//       }
+//       catch {
+//         tableData.value.splice(dataIndex2, 1)
+//       }
+//     }
+//   }
+//   else {
+//     let realIndex = (currentPage.value - 1) * pageSize.value + a
+//     tableData.value.splice(realIndex, 1)
+//     copyData.value.splice(realIndex, 1)
+//   }
+// }
 
 const multipleTableRef = ref()
 const multipleSelection = ref([])
