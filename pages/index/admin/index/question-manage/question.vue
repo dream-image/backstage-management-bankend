@@ -14,7 +14,18 @@ onMounted(()=>{
   axios.get("http://localhost:8888/get/allquestionbank"
 ).then(response => {
 // 请求成功，处理响应
-tableData.value=response.data;
+if(response.data.length==0){
+  ElMessage.warning("题库为空")
+  tableData.value=[]
+  return;
+}
+// console.log(response.data.list.map)
+tableData.value=response.data.map(i=>{
+  return {
+    ...i,
+    createtime:dayjs(i.createtime).format('YYYY-MM-DD hh:mm:ss').toString()
+  }
+})
 
 }).catch(error => {
   // 处理请求错误

@@ -83,6 +83,7 @@ import * as echarts from 'echarts';
 import { routeUrl } from '~/nutils/goto';
 import { _ } from "lodash"
 import axios from 'axios';
+import dayjs from 'dayjs';
 import { SelectProps } from 'element-plus/es/components/select-v2/src/defaults';
 const props = defineProps(['person'])
 const person = ref({})
@@ -114,7 +115,11 @@ watch(() => route.query.username ? route.query.username : "", (newValue, oldValu
 })
 
 watch(props, () => {
-  person.value = props.person
+  person.value ={
+     ...props.person,
+     register_time: dayjs(props.person.register_time).format('YYYY-MM-DD HH:mm:ss'),
+     login_time: dayjs(props.person.login_time).format('YYYY-MM-DD HH:mm:ss')
+  }
 })
 
 
@@ -516,7 +521,7 @@ watch(showWhatQuestionBank,()=>{
       },
       xAxis: {
         type: 'category',
-        data: obj.common.categories.reverse(),
+        data: obj.common.categories,
         name: "日期",
         axisLabel: {
           interval:0
@@ -541,11 +546,11 @@ watch(showWhatQuestionBank,()=>{
       series:obj.common.series.map(i=>{
         return {
           ...i,
-          data:i.data.reverse(),
+          data:i.data,
           label: { formatter: '{c}', show: true },
           type:"line"
         }
-      }).reverse()
+      })
     };
     var normalChartDom = normalPicture.value;
     var normalChart = echarts.init(normalChartDom);
@@ -592,7 +597,7 @@ watch(showWhatQuestionBank,()=>{
       },
       xAxis: {
         type: 'category',
-        data: obj.challenge.categories.reverse(),
+        data: obj.challenge.categories,
         name: "日期",
         axisLabel: {
           interval:0
@@ -633,7 +638,7 @@ watch(showWhatQuestionBank,()=>{
       series:obj.challenge.series.map(i=>{
         return {
           ...i,
-          data:i.data.reverse(),
+          data:i.data,
           label: { formatter: '{c}', show: true },
           type:"line"
         }
@@ -684,7 +689,7 @@ watch(showWhatQuestionBank,()=>{
     width: 100%;
     position: relative;
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     padding: 0px 10px;
     background-color: white;
   }

@@ -111,22 +111,25 @@ const password = ref("");
 const isRememberPwd = ref("");
 const showParticles = ref(false)
 function login() {
-  navigateTo("/admin/question-manage", { replace: true })
-  // axios.get("http://localhost:8888/login/manager", {
+  
+  axios.get("http://localhost:8888/login/manager", {
 
-  //   params: {
-  //     'username': username.value,
-  //     'password': password.value
-  //   }
-  // }).then(response => {
-  //   // 请求成功，处理响应
-  //   console.log('获取的数据:', response.data);
-  //   navigateTo("/admin/question-manage")
-  // }).catch(error => {
-  //   // 处理请求错误
-  //   showError = true;
-  //   console.error('请求失败:', error);
-  // });
+    params: {
+      'username': username.value,
+      'password': password.value
+    }
+  }).then(response => {
+    // 请求成功，处理响应
+    console.log('获取的数据:', response.data);
+    navigateTo("/admin/question-manage", { replace: true })
+  }).catch(error => {
+    // 处理请求错误
+    showError.value = true;
+    console.error('请求失败:', error);
+    setTimeout(() => {
+      showError.value=false
+    }, 2000);
+  });
 
 }
 onMounted(() => {

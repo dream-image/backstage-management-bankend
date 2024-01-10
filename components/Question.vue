@@ -1,5 +1,5 @@
 <template>
-  <div id="all-wrapper" style="display: flex; justify-content: space-evenly;">
+  <div id="all-wrapper" style="display: flex;">
     <div id="header-wrapper">
       <div id="header-title">
         <!-- <el-breadcrumb separator="/" style="transform: translateX(25px) translateY(10px)">
@@ -33,6 +33,14 @@
             @blur="searchQuestion(false)"></el-input>
           <el-button type="primary" style="width: 60px" @click="searchQuestion(false)">查询</el-button>
           <el-button style="width: 60px" @click="reset">重置</el-button>
+          <el-button type="primary" @click="handleAdd()" style="
+              width: 75px;
+              position: absolute;
+              top: 0;
+              bottom: 0;
+              margin: auto 0;
+              transform: translateX(250px);
+            ">添加</el-button>
         </div>
       </div>
     </div>
@@ -60,7 +68,24 @@
           <!-- <el-button @click="deleteSelection()" style="width: 80px" size="small" type="primary">批量删除</el-button> -->
         </div>
       </div>
-
+      <div id="edit" style="position:absolute; margin: -20px 280px; background-color: white; z-index: 11; display: none; width: 400px;border-radius: 25px;">
+        <div id="edit_box" style="padding: 20px 30px;">
+          <el-form :model="form" :key="timer" style="max-height: 450px; overflow:auto;">
+          <div id="app">
+            <el-form-item label="题库描述">
+              <el-input v-model="bank.bankname" style="margin:0px 0px"></el-input>
+            </el-form-item>
+           
+           
+            <!-- 题目添加的按钮 -->
+            <div style="margin:10px 0px">
+              <el-button @click="CancelAdd" type="primary">取消</el-button>
+              <el-button @click="addQuestion" type="primary">添加</el-button>
+            </div>
+          </div>
+          </el-form>
+        </div>
+      </div>
       <div id="table">
         <client-only>
           <el-table ref="multipleTableRef" :data="reallyTableData" style="width: 100%; height: 310px; border: none"
@@ -103,7 +128,7 @@
 import { routeUrl } from '~/nutils/goto';
 import { _ } from "lodash"
 import axios from 'axios';
-
+import dayjs from "dayjs"
 
 const props = defineProps(["tableData"])
 const { options } = props
@@ -117,14 +142,21 @@ const pageSize = ref(10)
 const totalNumber = ref(tableData.value.length)
 const reallyTableData = ref([])
 const questionBankName = ref("")
+const bank = reactive({
+  bankname:'',
+  questionnum:'',
+  createtime:'',
+  creater:''
 
+
+});
 const multipleTableRef = ref()
 const multipleSelection = ref([])
 watchEffect(() => {
   totalNumber.value = tableData.value.length
-  reallyTableData.value = tableData.value.slice((currentPage.value - 1) * pageSize.value, _.min([(currentPage.value) * pageSize.value, tableData.value.length]))
+  reallyTableData.value =tableData.value.length!=0?tableData.value.slice((currentPage.value - 1) * pageSize.value, _.min([(currentPage.value) * pageSize.value, tableData.value.length])):[]
 })
-watch(props,()=>{
+watch(props, () => {
   // console.log(props)
   copyData.value = props.tableData
   tableData.value = props.tableData
@@ -186,37 +218,76 @@ function handleEdit(a, obj) {
 
 // 删除数据
 function handleDelete(a, obj) {
+  console.log(a, obj)
+  ElMessageBox.confirm(`你确定要删除${obj.bankname}吗？`, '警告', {
+    confirmButtonText: '确定',
+    cancelButtonText: '再想想',
+    type: 'warning',
+  }).then(() => {
+    ElMessageBox.confirm(`你真的要删除${obj.bankname}吗？`, '再次警告', {
+      confirmButtonText: '是的',
+      cancelButtonText: '再想想',
+      type: 'warning',
+    }).then(() => {
+      ElMessageBox.confirm(`再确认一次，你真真真真的要删除${obj.bankname}吗？`, '最终警告', {
+        confirmButtonText: '肯定！',
+        cancelButtonText: '再想想',
+        type: 'warning',
+      }).then(() => {
+        if (questionBankName.value) {
+          let dataIndex = null
+          try {
+            copyData.value.forEach((i, index) => {
+              if (i.name == obj.name) {
+                dataIndex = index
+                throw new Error("找到对应的元素了")
+              }
+            })
+          } catch {
+            copyData.value.splice(dataIndex, 1)
+            let dataIndex2 = null
+            try {
+              tableData.value.forEach((i, index) => {
+                if (i.name == obj.name) {
+                  dataIndex2 = index
+                  throw new Error("找到对应的元素了")
+                }
+              })
+            }
+            catch {
+              tableData.value.splice(dataIndex2, 1)
+              $fetch("http://localhost:3000/questionBank", {
+                method: "DELETE",
+                body: {
+                  name: obj.bankname
+                }
+              }).then(() => {
 
-  if (questionBankName.value) {
-    let dataIndex = null
-    try {
-      copyData.value.forEach((i, index) => {
-        if (i.name == obj.name) {
-          dataIndex = index
-          throw new Error("找到对应的元素了")
+              }).catch((errr) => {
+
+              })
+            }
+          }
+        }
+        else {
+          let realIndex = (currentPage.value - 1) * pageSize.value + a
+          tableData.value.splice(realIndex, 1)
+          $fetch("http://localhost:3000/questionBank", {
+            method: "DELETE",
+            body: {
+              name: obj.bankname
+            }
+          }).then(() => {
+
+          }).catch((errr) => {
+
+          })
+
         }
       })
-    } catch {
-      copyData.value.splice(dataIndex, 1)
-      let dataIndex2 = null
-      try {
-        tableData.value.forEach((i, index) => {
-          if (i.name == obj.name) {
-            dataIndex2 = index
-            throw new Error("找到对应的元素了")
-          }
-        })
-      }
-      catch {
-        tableData.value.splice(dataIndex2, 1)
-      }
-    }
-  }
-  else {
-    let realIndex = (currentPage.value - 1) * pageSize.value + a
-    tableData.value.splice(realIndex, 1)
-    copyData.value.splice(realIndex, 1)
-  }
+    })
+  })
+
 }
 
 
@@ -226,7 +297,40 @@ const clearSelected = () => {
 const handleSelectionChange = (val) => {
   multipleSelection.value = val
 }
+//添加数据
+function handleAdd() {
+  document.getElementById("all").style.display = "block";
+  document.getElementById("edit").style.display = "block";
+  // editForm.value = obj;
+  // console.log(editForm.value.title)
+}
+//取消添加题目
+function CancelAdd() {
+  document.getElementById("all").style.display = "none";
+  document.getElementById("edit").style.display = "none";
+}
+function addQuestion() {
+  bank.creater="管理员";
 
+  var time= dayjs(new Date().toISOString())
+        .format("YYYY-MM-DD hh:mm:ss")
+        .toString();
+  bank.createtime=time;
+  bank.questionnum=0;
+  console.log(time);
+  axios.post("http://localhost:8888/add/questionbank", bank).then(response => {
+
+    // console.log(response.data);
+    // console.log(bank);
+    document.getElementById("all").style.display = "none";
+  document.getElementById("edit").style.display = "none";
+  location.reload()
+  ElMessage.success("添加成功")
+  }).catch(error => {
+    ElMessage.error(error.message)
+    console.log(bank);
+  })
+}
 //批量删除
 function deleteSelection() {
   let ids = []
@@ -268,7 +372,7 @@ function activeCheckbox(row) {
   margin: auto;
   display: flex;
   flex-direction: column;
-  justify-content: space-around;
+  align-content: flex-start;
 
   #header-wrapper {
     height: 135px;
@@ -278,12 +382,12 @@ function activeCheckbox(row) {
     flex-direction: column;
     position: relative;
     box-shadow: 0 2px 10px 0 rgba(237, 238, 240, 0.50);
-
+    margin-bottom: 30px;
     #header-title {
       width: 100%;
       height: 65px;
       background-color: white;
-      
+
     }
 
     #header-body {
@@ -302,6 +406,7 @@ function activeCheckbox(row) {
     background-color: white;
     box-shadow: 0 2px 10px 0 rgba(237, 238, 240, 0.50);
     position: relative;
+    height: 100%;
     #table {
       width: 93%;
       height: 320px;

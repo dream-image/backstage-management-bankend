@@ -261,7 +261,7 @@ function activeCheckbox(row) {
   margin: auto;
   display: flex;
   flex-direction: column;
-  justify-content: space-around;
+  justify-content: flex-start;
 
   #header-wrapper {
     height: 135px;
@@ -271,7 +271,7 @@ function activeCheckbox(row) {
     flex-direction: column;
     position: relative;
     box-shadow: 0 2px 10px 0 rgba(237, 238, 240, 0.50);
-
+    margin-bottom: 20px;
     #header-title {
       width: 100%;
       height: 65px;
@@ -295,7 +295,7 @@ function activeCheckbox(row) {
     background-color: white;
     box-shadow: 0 2px 10px 0 rgba(237, 238, 240, 0.50);
     position: relative;
-
+    height: 100%;
     #table {
       width: 93%;
       height: 310px;

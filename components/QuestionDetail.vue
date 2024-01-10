@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div id="all-wrapper" style=" justify-content: space-evenly">
+    <div id="all-wrapper" style="">
       <div id="header-wrapper">
         <div id="header-title">
           <!-- <el-breadcrumb separator="/" style="transform: translateX(25px) translateY(10px)">
@@ -118,10 +118,17 @@
                         题型: {{ props.row.datitype }}
                       </p>
                       <p m="t-0 b-2" class="table_expand_p">
-                        题目: {{ props.row.title }}
+                        题目: {{ props.row.question }}
                       </p>
-
-                      <div v-for="i in Object.getOwnPropertyNames(props.row).filter(
+                      <div v-if="props.row.datitype == '判断题'">
+                        <p m="t-0 b-2" class="table_expand_p">
+                          正确 : {{ props.row.optionA }}
+                        </p>
+                        <p m="t-0 b-2" class="table_expand_p">
+                          错误 : {{ props.row.optionB }}
+                        </p>
+                      </div>
+                      <div v-if="props.row.datitype != '判断题'" v-for="i in Object.getOwnPropertyNames(props.row).filter(
                         (j) => {
                           return /option/.test(j) && props.row[j] !== null && props.row[j] !== undefined && props.row[j] !== '';
                         }
@@ -184,23 +191,31 @@
       <div id="edit_box">
         <el-form :model="form" :key="timer" style="max-height: 450px; overflow:auto;">
           <div id="app">
+            <el-form-item label="题目科目">
+              <el-select v-model="form.coursetype" @change="" placeholder="选择科目">
+                <el-option label="马原" value="马原"></el-option>
+                <el-option label="中国近代史" value="中国近代史"></el-option>
+                <el-option label="习概" value="习概"></el-option>
+              </el-select>
+            </el-form-item>
             <el-form-item label="题目描述">
               <el-input v-model="form.title" style="margin:0px 0px"></el-input>
             </el-form-item>
             <el-form-item label="题型选择" style="width: 180px;">
               <el-select v-model="form.type" @change="" placeholder="选择题型">
-                <el-option label="文本题" value="text"></el-option>
-                <el-option label="判断题" value="multipleChoice"></el-option>
-                <el-option label="选择题" value="singleChoice"></el-option>
+                <!-- <el-option label="文本题" value="文本题"></el-option> -->
+                <el-option label="判断题" value="判断题"></el-option>
+                <el-option label="单选题" value="单选题"></el-option>
+                <el-option label="多选题" value="多选题"></el-option>
               </el-select>
             </el-form-item>
-            <div v-show="form.type === 'text'">
+            <div v-show="form.type === '文本题'">
               <label for="textAnswer">答案</label>
               <el-input type="text" id="textAnswer" name="textAnswer" style="margin: 0px 0px 0px 13px;width: 298px;"
                 v-model="form.correctAnswer" />
             </div>
 
-            <div v-show="form.type === 'multipleChoice'">
+            <div v-show="form.type === '判断题'">
               <label for="multipleChoiceOptions">选项对：</label>
               <el-input type="text" id="multipleChoiceOptions" name="multipleChoiceOptions" v-model="form.optionA"
                 style="width: 280px;" />
@@ -208,11 +223,11 @@
               <el-input type="text" id="multipleChoiceOptions" name="multipleChoiceOptions" v-model="form.optionB"
                 style="width: 280px; margin: 10px 0px;" />
               <label for="textAnswer">答案:</label>
-              <el-input type="text" id="textAnswer" name="textAnswer" style="margin: 0px 10px 0px 21px;width: 140px;"
-                v-model="form.correctAnswer" />
+              <el-input type="text" id="textAnswer" name="textAnswer" style="margin: 0px 10px 0px 21px;width: 170px;"
+                v-model="form.correctAnswer" placeholder="请填 '正确' 或 '错误'" />
             </div>
 
-            <div v-show="form.type === 'singleChoice'">
+            <div v-show="form.type === '单选题'">
               <label for="optionCount">选项个数 </label>
               <el-input type="number" id="optionCount" v-model="form.columnnum" @input="generateInputFields"
                 style="width: 90px; margin: 0px 9px ;" />
@@ -226,12 +241,34 @@
                 </div>
               </div>
               <div style=" margin:15px 10px 0px 0px;">
-                <label for="singleChoiceOptions" style=" margin:0px 10px 0px px;">答案:</label>
+                <label for="singleChoiceOptions" style=" margin:0px 10px 0px 0px;">答案:</label>
                 <el-input type="text" id="singleChoiceOptions" name="singleChoiceOptions" v-model="form.correctAnswer"
-                  style="width: 200px;margin: 0px 0px 0px 18px ;" placeholder="多个选项用英文逗号分隔" />
+                  style="width: 200px;margin: 0px 0px 0px 18px ;" placeholder="" />
               </div>
 
             </div>
+
+            <div v-show="form.type === '多选题'">
+              <label for="optionCount">选项个数 </label>
+              <el-input type="number" id="optionCount" v-model.number="form.columnnum" @input="generateInputFields"
+                style="width: 90px; margin: 0px 9px ;" :min="1" :max="10" />
+
+              <!-- 根据选项个数动态生成输入框 -->
+              <div v-for="index in parseInt(form.columnnum)" :key="index">
+                <div style="margin: 15px 0px;">
+                  <label :for="`input${index}`">选项{{ String.fromCharCode(index + 64) }}：</label>
+                  <el-input :type="inputType" :id="`input${index}`" :name="`input${index}`"
+                    v-model="form[`option${String.fromCharCode(index + 64)}`]" style="width: 270px;" />
+                </div>
+              </div>
+              <div style=" margin:15px 10px 0px 0px;">
+                <label for="singleChoiceOptions" style=" margin:0px 10px 0px 0px;">答案:</label>
+                <el-input type="text" id="singleChoiceOptions" name="singleChoiceOptions" v-model="form.correctAnswer"
+                  style="width: 200px;margin: 0px 0px 0px 18px ;" placeholder="多个选项直接填写，如：ABC" />
+              </div>
+
+            </div>
+
             <!-- 题目添加的按钮 -->
             <div style="margin:10px 0px">
               <el-button @click="CancelAdd" type="primary">取消</el-button>
@@ -241,7 +278,7 @@
 
           <!-- 引入 Vue.js 和 Element Plus 的脚本 -->
           <!-- <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
-  <script src="https://unpkg.com/element-plus/lib/index.full.js"></script> -->
+          <script src="https://unpkg.com/element-plus/lib/index.full.js"></script> -->
           <!-- <div v-if="form.type=='单选题'">
                 <span>{{console.log(form.type)}}</span>
                 <el-form-item lable="选项数量">
@@ -274,7 +311,8 @@ const questionContent = ref("")
 const dialogImport = ref(false)
 watchEffect(() => {
   totalNumber.value = tableData.value.length
-  reallyTableData.value = tableData.value.slice((currentPage.value - 1) * pageSize.value, _.min([(currentPage.value) * pageSize.value, tableData.value.length]))
+  // console.log(tableData.value)
+  reallyTableData.value = !tableData.value?[]:tableData.value.slice((currentPage.value - 1) * pageSize.value, _.min([(currentPage.value) * pageSize.value, tableData.value.length]))
 })
 watch(props, () => {
 
@@ -283,21 +321,29 @@ watch(props, () => {
 
 }, { immediate: true })
 
+
+
 watch(typeSelect, () => {
-    axios.get(`http://localhost:8888/get/allquestion?name=${typeSelect.value}`).then(response => {
-      // 请求成功，处理响应
-      tableData.value = response.data;
-      copyData.value = response.data;
-      // console.log(tableData);
-    }).catch(error => {
-      // 处理请求错误
-      ElMessage.error('获取题目列表失败');
-      console.error('请求失败:', error);
-    })
+  axios.get(`http://localhost:8888/get/allquestion?name=${typeSelect.value}`).then(response => {
+    // 请求成功，处理响应
+    if(response.data && response.data.message){
+      tableData.value=[]
+      copyData.value=[]
+      return 
+
+    }
+    tableData.value = response.data;
+    copyData.value = response.data;
+    // console.log(tableData);
+  }).catch(error => {
+    // 处理请求错误
+    ElMessage.error('获取题目列表失败');
+    console.error('请求失败:', error);
+  })
 }, { immediate: true })
 //表单数据和函数
 import axios from 'axios';
-import { reactive } from 'vue'
+import { ElPopconfirm } from 'element-plus';
 const timer = ref(1);
 const inputs = ref([]);
 // do not use same name with ref
@@ -306,17 +352,28 @@ const onSubmit = () => {
   console.log('submit!')
 }
 const form = reactive({
+  coursetype: '',
   title: '',
-  optionA: ' ',
+  optionA: '',
   optionB: '',
   optionC: '',
-  optionD: ' ',
-  optionE: ' ',
+  optionD: '',
+  optionE: '',
+  optionF: '',
+  optionG: '',
+  optionH: '',
+  optionI: '',
+  optionJ: '',
   Anumber: "",
   Bnumber: "",
   Cnumber: "",
   Dnumber: "",
   Enumber: "",
+  Fnumber: "",
+  Gnumber: "",
+  Hnumber: "",
+  Inumber: "",
+  Jnumber: "",
   correctAnswer: '',
   type: '',
   creationTime: '',
@@ -326,7 +383,11 @@ const form = reactive({
   columnnum: 0
 });
 
-
+watch(() => form.type, () => {
+  if (form.type == "判断题") {
+    form.columnnum = 2
+  }
+})
 // 题库选择
 function changeTypeSelect(value) {
   options.value.forEach((i, index, arr) => {
@@ -373,15 +434,44 @@ function CancelAdd() {
 // const formattedTime = moment().format('YYYY-MM-DD');
 //添加题目按钮
 function addQuestion() {
-
+  // console.log(questionContent);
   // formattedTime
   // console.log(formattedTime);
-  axios.post("http://localhost:8888/add/question", form).then(response => {
+  console.log(form);
+  form.correctAnswer = form.correctAnswer.trim()
+  if (form.title.trim().length == 0) {
+    ElMessage.error("问题不能为空")
+    returnn
+  }
+  if (form.correctAnswer.trim().length == 0) {
+    ElMessage.error("答案不能为空")
+    return
+  }
+  if (form.columnnum <= 0 || form.columnnum > 10) {
+    ElMessage.error("选项不能为小于1个或者大于10个")
+    return
+  }
+  if (form.type == "单选题" && (form.correctAnswer.length > 1 || new RegExp(`^[a-jA-J]$`).test(form.correctAnswer) == false)) {
+    ElMessage.error("单选题答案格式不对")
+    return
+  }
+  else if (form.type == "多选题" && (form.correctAnswer.length == 1 || new RegExp(`^([a-jA-J]{1,${form.columnnum}})$`).test(form.correctAnswer) == false)) {
+    ElMessage.error("多选题答案格式不对")
+    return
+  }
+  else if (form.type == "判断题" && new RegExp(`^(正确|错误)$`).test(form.correctAnswer) == false) {
+    ElMessage.error("判断题答案格式不对")
+    return
+  }
 
-    console.log(response.data);
-    console.log(form);
+
+  axios.post("http://localhost:3000/add/question", form).then(response => {
+    ElMessage.success("添加成功");
+    CancelAdd()
+    // console.log(response.data);
+    // console.log(form);
   }).catch(error => {
-    console.log(form);
+    ElMessage.error(error.message);
   })
 }
 function handleSizeChange() {
@@ -409,50 +499,83 @@ function handleAdd() {
 
 // 删除数据
 function handleDelete(a, obj) {
-
-  if (questionContent.value) {
-    let dataIndex = null
-    try {
-      copyData.value.forEach((i, index) => {
-        if (i.id == obj.id) {
-          dataIndex = index
-          throw new Error("找到对应的元素了")
-        }
-      })
-    } catch {
-      copyData.value.splice(dataIndex, 1)
-      let dataIndex2 = null
+  ElMessageBox.confirm('你确定要删除吗？', 'warning', {
+    confirmButtonText: '确定',
+    cancelButtonText: '再想想',
+    type: 'warning',
+  }).then(() => {
+    if (questionContent.value) {
+      let dataIndex = null
       try {
-        tableData.value.forEach((i, index) => {
+        copyData.value.forEach((i, index) => {
           if (i.id == obj.id) {
-            dataIndex2 = index
+            dataIndex = index
             throw new Error("找到对应的元素了")
           }
         })
+      } catch {
+        copyData.value.splice(dataIndex, 1)
+        let dataIndex2 = null
+        try {
+          tableData.value.forEach((i, index) => {
+            if (i.id == obj.id) {
+              dataIndex2 = index
+              throw new Error("找到对应的元素了")
+            }
+          })
+        }
+        catch {
+          // console.log("dasda")
+          $fetch("http://localhost:8888/question", {
+            method: "DELETE",
+            body: {
+              id: [tableData.value[dataIndex2].id]
+            }
+          }).then(() => {
+            ElMessage({
+              message: '删除成功',
+              type: 'success',
+            })
+            tableData.value.splice(dataIndex2, 1)
+          }).catch(err => {
+            ElMessage({
+              message: '删除失败:' + err.message,
+              type: 'errrorr',
+            })
+          })
+        }
+
       }
-      catch {
-        // console.log("dasda")
-        $fetch("http://localhost:8888/question",{
-          method:"DELETE",
-          body:{
-            id:[tableData.value[dataIndex2].id]
-          }
-        })
-      }
-      // tableData.value.splice(dataIndex2, 1)
     }
-  }
-  else {
-    let realIndex = (currentPage.value - 1) * pageSize.value + a
-    $fetch("http://localhost:8888/question",{
-          method:"DELETE",
-          body:{
-            id:[tableData.value[realIndex].id]
-          }
+    else {
+      let realIndex = (currentPage.value - 1) * pageSize.value + a
+      // console.log("@@", a)
+      $fetch("http://localhost:8888/question", {
+        method: "DELETE",
+        body: {
+          id: [tableData.value[realIndex].id]
+        }
+      }).then(() => {
+
+        ElMessage({
+          message: '删除成功',
+          type: 'success',
         })
-    tableData.value.splice(realIndex, 1)
-    copyData.value.splice(realIndex, 1)
-  }
+        tableData.value.splice(realIndex, 1)
+        // console.log('@',tableData.value,copyData.value)
+        copyData.value = tableData.value
+        // console.log('@@',tableData.value,copyData.value)
+      }).catch(err => {
+        ElMessage({
+          message: '删除失败:' + err.message,
+          type: 'errrorr',
+        })
+      })
+
+    }
+  })
+
+
 }
 
 const multipleTableRef = ref()
@@ -475,6 +598,7 @@ function deleteSelection() {
 
 function exchangeTable(a, expandedRows) {
   if (expandedRows.length != 0) {
+    // console.log(expandedRows)
     expandedRows.forEach((i, index) => {
       setTimeout(() => {
         let dom = document.getElementById("pieChart:" + i.id)
@@ -530,8 +654,8 @@ function exchangeTable(a, expandedRows) {
               },
               data: Object.getOwnPropertyNames(i).filter(x => {
                 return /[A-Z]num/.test(x) && i[x] !== null
-              }).map(y => {
-                return { value: i[y], name: y.split('num')[0] }
+              }).map((y, index) => {
+                return { value: i[y], name: i.datitype != '判断题' ? y.split('num')[0] : index == 0 ? "正确" : "错误" }
               })
             }
           ]
@@ -543,7 +667,7 @@ function exchangeTable(a, expandedRows) {
       }, 1000)
     })
   } else {
-    console.log("aa", a)
+    // console.log("aa", a)
   }
 }
 
@@ -563,7 +687,7 @@ function download() {
   margin: auto;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
 
 
   #header-wrapper {
@@ -574,7 +698,7 @@ function download() {
     flex-direction: column;
     position: relative;
     box-shadow: 0 2px 10px 0 rgba(237, 238, 240, 0.5);
-
+    margin-bottom: 20px;
     #header-title {
       width: 100%;
       height: 95px;

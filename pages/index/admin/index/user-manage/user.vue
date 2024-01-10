@@ -17,6 +17,7 @@ onMounted(() => {
     let list=response.data.map(i=>{
       return{
         ...i,
+        challengeAccuracy:(i.challengeAccuracy*1).toFixed(2),
         id:i.userid,
         username:i.userid,
         nickname:i.nickname,
